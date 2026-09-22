@@ -6,3 +6,23 @@ body {
   margin: 0;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Acciones de registro: tono institucional claro y legible. */
+table .rounded-lg.bg-amber-500 {
+  background-color: #bbf7d0 !important;
+  color: #166534 !important;
+}
+
+table .rounded-lg.bg-amber-500:hover {
+  background-color: #86efac !important;
+}
+
+table .border-amber-300 {
+  border-color: #86efac !important;
+  background-color: #f0fdf4 !important;
+  color: #166534 !important;
+}
+
+table .border-amber-300:hover {
+  background-color: #dcfce7 !important;
+}

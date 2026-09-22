@@ -1,0 +1,28 @@
+import { Router } from 'express';
+import multer from 'multer';
+import type { Pool } from 'pg';
+import { verificarRol, verificarToken } from '../middleware/auth.js';
+import ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
+
+const upload = multer({ dest: 'uploads/', limits: { fileSize: 10 * 1024 * 1024 } });
+/** Creates a progress report and stores its evidence files atomically. */
+export function createReportesRouter(pool: Pool): Router {
+ const router=Router();
+ router.get('/reportes/eje/:codigo/excel', async (req,res)=>{try{const q=await pool.query(`SELECT a.codigo,a.nombre,a.resultado,a.indicador_proceso,a.meta_2030,i.siglas,m.gestion,m.valor_programado,m.valor_ejecutado FROM acciones a JOIN ejes e ON e.id=a.eje_id LEFT JOIN instituciones i ON i.id=a.institucion_principal_id LEFT JOIN metas_fisicas m ON m.accion_id=a.id WHERE e.codigo=$1 ORDER BY a.orden,m.gestion`,[req.params.codigo]);if(!q.rows.length)return res.status(404).json({success:false,data:null,error:'Eje no encontrado'});const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet(`Eje ${req.params.codigo}`);ws.addRow(['Código','Acciones','Resultados','Indicador','Gestión','Programado','Ejecutado','Meta 2030','Institución']);q.rows.forEach(r=>ws.addRow([r.codigo,r.nombre,r.resultado,r.indicador_proceso,r.gestion,r.valor_programado,r.valor_ejecutado,r.meta_2030,r.siglas]));ws.getRow(1).font={bold:true};res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition',`attachment; filename=eje-${req.params.codigo}.xlsx`);await wb.xlsx.write(res);res.end();}catch{return res.status(500).json({success:false,data:null,error:'No se pudo exportar Excel'});}});
+ router.get('/reportes/anual/:gestion', async (req,res)=>{const doc=new PDFDocument();res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition',`attachment; filename=informe-${req.params.gestion}.pdf`);doc.pipe(res);doc.fontSize(18).text('Política Antidroga 2026–2030');doc.fontSize(12).text(`Informe anual ${req.params.gestion}`);doc.text(`Generado: ${new Date().toLocaleString('es-BO')}`);doc.end();});
+ router.get('/reportes/institucion/:id', async (req,res)=>{const doc=new PDFDocument();res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition',`attachment; filename=institucion-${req.params.id}.pdf`);doc.pipe(res);doc.fontSize(18).text('Política Antidroga 2026–2030');doc.fontSize(12).text(`Informe institucional ${req.params.id}`);doc.text(`Generado: ${new Date().toLocaleString('es-BO')}`);try{const q=await pool.query('SELECT siglas,nombre FROM instituciones WHERE id=$1',[req.params.id]);doc.text(q.rows[0]?`${q.rows[0].siglas} - ${q.rows[0].nombre}`:'Institución no encontrada');}catch{doc.text('No se pudo consultar la institución');}doc.end();});
+ router.get('/reportes/dashboard', async (_req,res)=>{try{const q=await pool.query(`SELECT e.codigo,e.nombre,COUNT(DISTINCT a.id)::int AS acciones,COALESCE(SUM(m.valor_programado),0) AS programado,COALESCE(SUM(m.valor_ejecutado),0) AS ejecutado,CASE WHEN COALESCE(SUM(m.valor_programado),0)>0 THEN ROUND(COALESCE(SUM(m.valor_ejecutado),0)/SUM(m.valor_programado)*100,2) ELSE 0 END AS avance FROM ejes e LEFT JOIN acciones a ON a.eje_id=e.id LEFT JOIN metas_fisicas m ON m.accion_id=a.id GROUP BY e.id ORDER BY e.codigo`);return res.json({success:true,data:q.rows,error:null});}catch{return res.status(500).json({success:false,data:null,error:'No se pudo obtener dashboard'});}});
+ router.post('/metas/:id/reporte', verificarToken, verificarRol('admin','coordinador_cpi','responsable_institucional'), upload.array('evidencias', 10), async (req,res)=>{
+  const metaId=Number(req.params.id), userId=req.user!.id;
+  const valor=Number(req.body.valor_reportado); if(!Number.isInteger(metaId)||!Number.isFinite(valor)) return res.status(400).json({success:false,data:null,error:'Datos inválidos'});
+  const client=await pool.connect(); try { await client.query('BEGIN');
+   const meta=await client.query('SELECT m.valor_programado,a.institucion_principal_id FROM metas_fisicas m JOIN acciones a ON a.id=m.accion_id WHERE m.id=$1',[metaId]); if(!meta.rows[0]||valor>Number(meta.rows[0].valor_programado)){await client.query('ROLLBACK');return res.status(400).json({success:false,data:null,error:'Valor ejecutado inválido'});}
+   if(req.user!.rol==='responsable_institucional' && req.user!.institucionId!==meta.rows[0].institucion_principal_id){await client.query('ROLLBACK');return res.status(403).json({success:false,data:null,error:'La meta no pertenece a su institución'});}
+   const estado=req.body.estado==='borrador'?'borrador':'enviado'; const report=await client.query('INSERT INTO reportes_avance(meta_fisica_id,usuario_id,valor_reportado,justificacion,estado) VALUES($1,$2,$3,$4,$5) RETURNING id',[metaId,userId,valor,req.body.justificacion||null,estado]);
+   await client.query('UPDATE metas_fisicas SET valor_ejecutado=$1,observaciones=$2,fecha_reporte=CURRENT_DATE WHERE id=$3',[valor,req.body.observaciones||null,metaId]);
+   for(const f of (req.files||[]) as Express.Multer.File[]) await client.query('INSERT INTO evidencias(reporte_id,nombre_archivo,url,tipo_mime,tamaño_bytes,subido_por) VALUES($1,$2,$3,$4,$5,$6)',[report.rows[0].id,f.originalname,`/uploads/${f.filename}`,f.mimetype,f.size,userId]);
+   await client.query('COMMIT'); return res.status(201).json({success:true,data:{id:report.rows[0].id},error:null});
+  } catch {await client.query('ROLLBACK');return res.status(500).json({success:false,data:null,error:'No se pudo guardar el reporte'});} finally {client.release();}
+ }); return router;
+}

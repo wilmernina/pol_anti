@@ -27,5 +27,6 @@ export const env = {
   dbName: required('DB_NAME'),
   dbUser: required('DB_USER'),
   dbPassword: required('DB_PASSWORD'),
-  apiPort: positiveInteger('API_PORT', required('API_PORT'))
+  apiPort: positiveInteger('API_PORT', required('API_PORT')),
+  jwtSecret: required('JWT_SECRET')
 };

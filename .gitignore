@@ -6,3 +6,5 @@ coverage/
 backend/.env
 frontend/.env
 .superpowers/
+doc/
+*.Rhistory
