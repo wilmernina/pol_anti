@@ -9,5 +9,6 @@ describe('FichaEje compacta', () => {
     expect(screen.getByText(/Indicadores principales/)).toBeInTheDocument();
     expect(screen.getByText(/Resultados esperados 2030/)).toBeInTheDocument();
     expect(screen.getAllByRole('list')).toHaveLength(2);
+    expect(Array.from(document.querySelectorAll('details')).every((item) => !item.open)).toBe(true);
   });
 });
