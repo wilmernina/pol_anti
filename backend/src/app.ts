@@ -6,6 +6,7 @@ import { createReportesRouter } from './routes/reportesRoutes.js';
 import { createAuthRouter } from './routes/authRoutes.js';
 import { createResultadosCuatrimestralesRouter } from './routes/resultadosCuatrimestralesRoutes.js';
 import { createAdminRouter } from './routes/adminRoutes.js';
+import { createMatrizRouter } from './routes/matrizRoutes.js';
 
 export function createApp(pool: Pool): Express {
   const app = express();
@@ -14,6 +15,7 @@ export function createApp(pool: Pool): Express {
   app.use(express.json());
   app.use('/auth', createAuthRouter(pool));
   app.use('/admin', createAdminRouter(pool));
+  app.use('/matriz', createMatrizRouter(pool));
   // Vite removes the /api prefix before proxying requests to this server.
   app.use('/ejes', createEjesRouter(pool));
   app.use('/', createReportesRouter(pool));

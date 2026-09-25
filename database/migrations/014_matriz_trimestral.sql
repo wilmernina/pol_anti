@@ -17,6 +17,10 @@ BEGIN
   END IF;
 END $$;
 
+UPDATE acciones
+SET estado_planificacion = 'publicada'
+WHERE estado_planificacion = 'borrador';
+
 CREATE TABLE IF NOT EXISTS metas_trimestrales (
   id SERIAL PRIMARY KEY,
   accion_id INT NOT NULL REFERENCES acciones(id) ON DELETE CASCADE,
