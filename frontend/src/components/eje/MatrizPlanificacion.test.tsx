@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MatrizPlanificacion } from './MatrizPlanificacion';
 
 afterEach(cleanup);
@@ -24,5 +24,12 @@ describe('MatrizPlanificacion operativa', () => {
   it('permite desplazamiento horizontal en la tabla', () => {
     const { container } = render(<MatrizPlanificacion acciones={[action]} codigoEje="5" gestion={2026} />);
     expect(container.querySelector('.overflow-x-auto')).toBeInTheDocument();
+  });
+
+  it('envía la acción seleccionada al abrir la ficha', () => {
+    const onFicha = vi.fn();
+    render(<MatrizPlanificacion acciones={[action]} codigoEje="5" gestion={2026} onFicha={onFicha} />);
+    screen.getByRole('button', { name: 'Ficha' }).click();
+    expect(onFicha).toHaveBeenCalledWith(action);
   });
 });

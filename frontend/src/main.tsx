@@ -4,14 +4,14 @@ import App from './App';
 import { AuthProvider } from './auth/AuthContext';
 import { useAuth } from './auth/AuthContext';
 import { MatrizAdminPage } from './pages/MatrizAdminPage';
-import { EjeTrimestralPage } from './pages/EjeTrimestralPage';
+import { EjeTrimestralFichaPage } from './pages/EjeTrimestralFichaPage';
 import './index.css';
 
 function RouteEntry() {
   const { user } = useAuth();
   if (window.location.pathname === '/admin/matriz' && user?.rol === 'admin') return <MatrizAdminPage />;
   const eje = window.location.pathname.match(/^\/eje\/([1-9])$/);
-  if (eje && user) return <EjeTrimestralPage codigo={eje[1]} />;
+  if (eje && user) return <EjeTrimestralFichaPage codigo={eje[1]} />;
   return <App />;
 }
 
