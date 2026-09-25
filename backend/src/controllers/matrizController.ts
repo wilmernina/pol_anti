@@ -139,7 +139,8 @@ export function createMatrizController(pool: Pool) {
     },
 
     listActions: async (req: Request, res: Response) => {
-      if (!/^[1-9]$/.test(req.params.codigo)) return send(res, 400, null, 'Código de eje inválido');
+      const codigo = Array.isArray(req.params.codigo) ? '' : req.params.codigo;
+      if (!/^[1-9]$/.test(codigo)) return send(res, 400, null, 'Código de eje inválido');
       try {
         const result = await pool.query(
           `SELECT a.id AS accion_id,a.codigo,a.nombre,a.resultado,a.meta_2030,a.linea_base,a.tipo_accion,a.unidad_medida,a.medio_verificacion,a.estado_planificacion,
@@ -149,7 +150,7 @@ export function createMatrizController(pool: Pool) {
            FROM acciones a JOIN ejes e ON e.id=a.eje_id LEFT JOIN instituciones i ON i.id=a.institucion_principal_id
            LEFT JOIN metas_trimestrales mt ON mt.accion_id=a.id AND mt.gestion=2026
            WHERE e.codigo=$1 GROUP BY a.id,i.id ORDER BY a.orden`,
-          [req.params.codigo]
+          [codigo]
         );
         return send(res, 200, { acciones: result.rows });
       } catch {
