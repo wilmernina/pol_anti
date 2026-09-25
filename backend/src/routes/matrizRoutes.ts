@@ -7,6 +7,7 @@ export function createMatrizRouter(pool: Pool) {
   const router = Router();
   const controller = createMatrizController(pool);
   router.use(verificarToken, verificarRol('admin'));
+  router.get('/ejes/:codigo/acciones', controller.listActions);
   router.post('/ejes/:codigo/acciones', controller.createAction);
   router.put('/acciones/:id', controller.updateAction);
   router.put('/acciones/:id/planificacion', controller.savePlanification);

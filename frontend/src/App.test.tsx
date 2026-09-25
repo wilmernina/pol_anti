@@ -1,8 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
-
 import App from './App';
+import { AuthProvider } from './auth/AuthContext';
 
 afterEach(() => {
   cleanup();
@@ -10,25 +9,15 @@ afterEach(() => {
 });
 
 describe('App', () => {
-  it('shows the connection status returned by the API', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ status: 'ok', database: 'connected' })
-      })
-    );
-
-    render(<App />);
-
-    expect(await screen.findByText('PostgreSQL conectado')).toBeInTheDocument();
+  it('shows the authenticated portal login when there is no active user', () => {
+    render(<AuthProvider><App /></AuthProvider>);
+    expect(screen.getByText('Iniciar sesión')).toBeInTheDocument();
   });
 
-  it('shows a clear message when the API is unavailable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network unavailable')));
-
-    render(<App />);
-
-    expect(await screen.findByText('No se pudo conectar con el backend')).toBeInTheDocument();
+  it('keeps the unauthenticated view even when the dashboard request resolves', () => {
+    const fetch = vi.fn().mockResolvedValue({ json: async () => ({ success: false, data: [] }) });
+    vi.stubGlobal('fetch', fetch);
+    render(<AuthProvider><App /></AuthProvider>);
+    expect(screen.getByText('Iniciar sesión')).toBeInTheDocument();
   });
 });

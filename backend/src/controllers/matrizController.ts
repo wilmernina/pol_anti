@@ -138,6 +138,25 @@ export function createMatrizController(pool: Pool) {
       }
     },
 
+    listActions: async (req: Request, res: Response) => {
+      if (!/^[1-9]$/.test(req.params.codigo)) return send(res, 400, null, 'Código de eje inválido');
+      try {
+        const result = await pool.query(
+          `SELECT a.id AS accion_id,a.codigo,a.nombre,a.resultado,a.meta_2030,a.linea_base,a.tipo_accion,a.unidad_medida,a.medio_verificacion,a.estado_planificacion,
+             i.id AS entidad_id,i.siglas AS entidad,
+             COALESCE(json_agg(json_build_object('trimestre',mt.trimestre,'cantidadProgramada',mt.cantidad_programada) ORDER BY mt.trimestre) FILTER (WHERE mt.id IS NOT NULL),'[]'::json) AS trimestres,
+             COALESCE(SUM(mt.cantidad_programada) FILTER (WHERE mt.gestion=2026),0) AS meta_2026
+           FROM acciones a JOIN ejes e ON e.id=a.eje_id LEFT JOIN instituciones i ON i.id=a.institucion_principal_id
+           LEFT JOIN metas_trimestrales mt ON mt.accion_id=a.id AND mt.gestion=2026
+           WHERE e.codigo=$1 GROUP BY a.id,i.id ORDER BY a.orden`,
+          [req.params.codigo]
+        );
+        return send(res, 200, { acciones: result.rows });
+      } catch {
+        return send(res, 500, null, 'No se pudieron listar las acciones');
+      }
+    },
+
     getAction: async (req: Request, res: Response) => {
       const id = Number(req.params.id);
       if (!Number.isInteger(id) || id <= 0) return send(res, 400, null, 'Acción inválida');
