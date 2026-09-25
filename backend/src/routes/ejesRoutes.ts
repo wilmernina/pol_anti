@@ -7,6 +7,10 @@ const error = (response: Response, status: number, message: string) => response.
 /** Routes that expose the Cuadro A and Cuadro B of an action axis. */
 export function createEjesRouter(pool: Pool): Router {
   const router = Router();
+  router.get('/', async (_request: Request, response: Response) => {
+    try { const result = await pool.query('SELECT codigo,nombre,objetivo FROM ejes ORDER BY codigo'); return response.json({ success: true, data: result.rows, error: null }); }
+    catch { return error(response, 500, 'No se pudieron obtener los ejes'); }
+  });
   router.get('/:codigo/resumen', async (request: Request, response: Response) => {
     const codigo = Array.isArray(request.params.codigo) ? '' : request.params.codigo;
     if (!validCode(codigo)) return error(response, 400, 'Código de eje inválido');
