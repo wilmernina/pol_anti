@@ -73,18 +73,34 @@ export function createMatrizController(pool: Pool) {
     updateAction: async (req: Request, res: Response) => {
       const id = Number(req.params.id);
       const fields = technicalFields(req.body ?? {});
+      const quarters = quarterlyValues(req.body?.trimestres);
       if (!Number.isInteger(id) || id <= 0 || !validTechnicalFields(fields)) return send(res, 422, null, 'Variables técnicas inválidas');
+      if (!quarters) return send(res, 422, null, 'Se requieren cuatro cantidades trimestrales no negativas');
+      const client = await pool.connect();
       try {
-        const current = await pool.query('SELECT id FROM acciones WHERE id=$1 AND eje_id=(SELECT id FROM ejes WHERE codigo=$2)', [id, req.body.ejeCodigo]);
-        if (!current.rows[0]) return send(res, 404, null, 'Acción no encontrada en el eje indicado');
-        const result = await pool.query(
+        await client.query('BEGIN');
+        const current = await client.query('SELECT id FROM acciones WHERE id=$1 AND eje_id=(SELECT id FROM ejes WHERE codigo=$2)', [id, req.body.ejeCodigo]);
+        if (!current.rows[0]) { await client.query('ROLLBACK'); return send(res, 404, null, 'Acción no encontrada en el eje indicado'); }
+        const result = await client.query(
           `UPDATE acciones SET codigo=$1,nombre=$2,resultado=$3,unidad_medida=$4,meta_2030=$5,institucion_principal_id=$6,linea_base=$7,tipo_accion=$8,medio_verificacion=$9 WHERE id=$10 RETURNING *`,
           [fields.codigo, fields.nombre, fields.resultado || null, fields.unidadMedida, fields.meta2030, fields.entidadId, fields.lineaBase, fields.tipoAccion, fields.medioVerificacion, id]
         );
+        for (const [index, amount] of quarters.entries()) {
+          await client.query(
+            `INSERT INTO metas_trimestrales(accion_id,gestion,trimestre,cantidad_programada)
+             VALUES($1,$2,$3,$4)
+             ON CONFLICT (accion_id,gestion,trimestre) DO UPDATE SET cantidad_programada=EXCLUDED.cantidad_programada`,
+            [id, 2026, index + 1, amount]
+          );
+        }
+        await client.query('COMMIT');
         return send(res, 200, result.rows[0]);
       } catch (error: any) {
+        await client.query('ROLLBACK');
         if (error?.code === '23505') return send(res, 409, null, 'El código de acción ya existe en el eje');
         return send(res, 500, null, 'No se pudo actualizar la acción');
+      } finally {
+        client.release();
       }
     },
 

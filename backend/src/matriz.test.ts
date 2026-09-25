@@ -88,4 +88,19 @@ describe('API de matriz trimestral', () => {
     ]);
     expect(response.body.data.acciones[0].meta2026).toBe(100);
   });
+
+  it('actualiza también la planificación trimestral al editar una acción', async () => {
+    const clientQuery = vi.fn()
+      .mockResolvedValueOnce({ rows: [{ id: 10 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 10, codigo: '1.1' }] })
+      .mockResolvedValue({ rows: [] });
+    const pool = { query: vi.fn(), connect: vi.fn().mockResolvedValue({ query: clientQuery, release: vi.fn() }) };
+    const response = await request(createApp(pool as unknown as Pool))
+      .put('/matriz/acciones/10')
+      .set('Authorization', `Bearer ${token('admin')}`)
+      .send({ ejeCodigo: '1', codigo: '1.1', entidadId: 1, nombre: 'Acción editada', resultado: 'Resultado', tipoAccion: 'PROYECTO', unidadMedida: 'número', trimestres: [1, 2, 3, 4] });
+
+    expect(response.status).toBe(200);
+    expect(clientQuery.mock.calls.some(([sql]) => String(sql).includes('metas_trimestrales'))).toBe(true);
+  });
 });
