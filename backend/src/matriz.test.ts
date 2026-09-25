@@ -29,6 +29,13 @@ describe('migración de matriz trimestral', () => {
     expect(sql).toContain('usuario_id INT REFERENCES usuarios(id)');
     expect(sql).toContain('fecha_registro TIMESTAMP');
   });
+
+  it('define evidencias, justificación y medidas correctivas', async () => {
+    const sql = await readFile(path.join(projectRoot, 'database/migrations/016_evidencias_medicion_trimestral.sql'), 'utf8');
+    expect(sql).toContain('evidencias JSONB');
+    expect(sql).toContain('justificacion TEXT');
+    expect(sql).toContain('medidas_correctivas TEXT');
+  });
 });
 
 const token = (rol: string) => jwt.sign({ id: 1, username: 'tester', rol, institucionId: null }, env.jwtSecret);

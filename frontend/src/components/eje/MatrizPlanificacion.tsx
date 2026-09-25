@@ -1,7 +1,7 @@
 import { QuarterCell } from './QuarterCell';
 import { useEffect } from 'react';
 
-export type MatrixAction = { accionId?: number; entidadId?: number | null; codigo: string; entidad: string | null; nombre: string; resultado: string | null; tipoAccion: string | null; unidadMedida: string; medios: number; lineaBase: number | null; medioVerificacion?: string | null; trimestres: { trimestre: number; cantidadProgramada: number; cantidadEjecutada?: number; observaciones?: string | null; medioVerificacion?: string | null; evidenciaUrl?: string | null }[]; meta2026: number; meta2030: number | null };
+export type MatrixAction = { accionId?: number; entidadId?: number | null; codigo: string; entidad: string | null; nombre: string; resultado: string | null; tipoAccion: string | null; unidadMedida: string; medios: number; lineaBase: number | null; medioVerificacion?: string | null; trimestres: { trimestre: number; cantidadProgramada: number; cantidadEjecutada?: number; observaciones?: string | null; justificacion?: string | null; medidasCorrectivas?: string | null; medioVerificacion?: string | null; evidenciaUrl?: string | null; evidencias?: { nombre: string; url: string; tipo: string; tamano: number }[] }[]; meta2026: number; meta2030: number | null };
 
 const number = (value: number | null | undefined) => value === null || value === undefined ? '—' : Number(value).toLocaleString('es-BO');
 
