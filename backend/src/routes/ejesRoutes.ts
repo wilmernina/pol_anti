@@ -24,7 +24,7 @@ export function createEjesRouter(pool: Pool): Router {
         a.id AS accion_id,a.codigo,a.nombre,a.resultado,a.indicador_proceso,a.meta_2030,
         a.linea_base,a.tipo_accion,a.unidad_medida,a.medio_verificacion,a.estado_planificacion,
         i.siglas AS entidad,
-        COALESCE(json_agg(json_build_object('trimestre',mt.trimestre,'cantidadProgramada',mt.cantidad_programada) ORDER BY mt.trimestre)
+        COALESCE(json_agg(json_build_object('trimestre',mt.trimestre,'cantidadProgramada',mt.cantidad_programada,'cantidadEjecutada',mt.cantidad_ejecutada,'observaciones',mt.observaciones,'medioVerificacion',mt.medio_verificacion,'evidenciaUrl',mt.evidencia_url) ORDER BY mt.trimestre)
           FILTER (WHERE mt.id IS NOT NULL), '[]'::json) AS trimestres,
         COALESCE(SUM(mt.cantidad_programada) FILTER (WHERE mt.gestion=2026), 0) AS meta_2026
         FROM ejes e

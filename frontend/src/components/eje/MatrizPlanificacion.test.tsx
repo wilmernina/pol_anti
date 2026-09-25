@@ -32,4 +32,11 @@ describe('MatrizPlanificacion operativa', () => {
     screen.getByRole('button', { name: 'Ficha' }).click();
     expect(onFicha).toHaveBeenCalledWith(action);
   });
+
+  it('envía la acción al abrir el registro de medición', () => {
+    const onMedir = vi.fn();
+    render(<MatrizPlanificacion acciones={[action]} codigoEje="5" gestion={2026} onMedir={onMedir} />);
+    screen.getByRole('button', { name: 'Llenar medición' }).click();
+    expect(onMedir).toHaveBeenCalledWith(action);
+  });
 });

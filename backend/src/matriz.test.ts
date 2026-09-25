@@ -22,6 +22,13 @@ describe('migración de matriz trimestral', () => {
     expect(sql).toContain('cantidad_programada NUMERIC NOT NULL CHECK (cantidad_programada >= 0)');
     expect(sql).toContain('UNIQUE (accion_id, gestion, trimestre)');
   });
+
+  it('define los campos de captura del ejecutado trimestral', async () => {
+    const sql = await readFile(path.join(projectRoot, 'database/migrations/015_medicion_trimestral.sql'), 'utf8');
+    expect(sql).toContain('medio_verificacion TEXT');
+    expect(sql).toContain('usuario_id INT REFERENCES usuarios(id)');
+    expect(sql).toContain('fecha_registro TIMESTAMP');
+  });
 });
 
 const token = (rol: string) => jwt.sign({ id: 1, username: 'tester', rol, institucionId: null }, env.jwtSecret);
@@ -102,5 +109,29 @@ describe('API de matriz trimestral', () => {
 
     expect(response.status).toBe(200);
     expect(clientQuery.mock.calls.some(([sql]) => String(sql).includes('metas_trimestrales'))).toBe(true);
+  });
+
+  it('permite al responsable registrar el ejecutado sin superar lo programado', async () => {
+    const query = vi.fn()
+      .mockResolvedValueOnce({ rows: [{ institucion_principal_id: 7 }] })
+      .mockResolvedValueOnce({ rows: [{ cantidad_programada: 100 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 4, trimestre: 2, cantidad_ejecutada: 80 }] });
+    const response = await request(createApp({ query } as unknown as Pool))
+      .put('/acciones/10/mediciones-trimestrales')
+      .set('Authorization', `Bearer ${jwt.sign({ id: 2, username: 'responsable', rol: 'responsable_institucional', institucionId: 7 }, env.jwtSecret)}`)
+      .send({ gestion: 2026, trimestre: 2, cantidadEjecutada: 80, observaciones: 'Avance verificado' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.cantidad_ejecutada).toBe(80);
+  });
+
+  it('rechaza al responsable de otra institución', async () => {
+    const query = vi.fn().mockResolvedValueOnce({ rows: [{ institucion_principal_id: 9 }] });
+    const response = await request(createApp({ query } as unknown as Pool))
+      .put('/acciones/10/mediciones-trimestrales')
+      .set('Authorization', `Bearer ${jwt.sign({ id: 2, username: 'responsable', rol: 'responsable_institucional', institucionId: 7 }, env.jwtSecret)}`)
+      .send({ gestion: 2026, trimestre: 2, cantidadEjecutada: 80 });
+
+    expect(response.status).toBe(403);
   });
 });
