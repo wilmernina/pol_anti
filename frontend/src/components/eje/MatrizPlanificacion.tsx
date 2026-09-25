@@ -1,11 +1,11 @@
 import { QuarterCell } from './QuarterCell';
 import { useEffect } from 'react';
 
-export type MatrixAction = { accionId?: number; entidadId?: number | null; codigo: string; entidad: string | null; nombre: string; resultado: string | null; tipoAccion: string | null; unidadMedida: string; medios: number; lineaBase: number | null; medioVerificacion?: string | null; trimestres: { trimestre: number; cantidadProgramada: number; cantidadEjecutada?: number; medicionRegistrada?: boolean; observaciones?: string | null; justificacion?: string | null; medidasCorrectivas?: string | null; medioVerificacion?: string | null; evidenciaUrl?: string | null; evidencias?: { nombre: string; url: string; tipo: string; tamano: number }[] }[]; meta2026: number; meta2030: number | null };
+export type MatrixAction = { accionId?: number; entidadId?: number | null; codigo: string; entidad: string | null; nombre: string; resultado: string | null; tipoAccion: string | null; unidadMedida: string; medios: number; lineaBase: number | null; medioVerificacion?: string | null; trimestres: { trimestre: number; cantidadProgramada: number; cantidadEjecutada?: number; medicionRegistrada?: boolean; observaciones?: string | null; justificacion?: string | null; medidasCorrectivas?: string | null; medioVerificacion?: string | null; evidenciaUrl?: string | null; evidencias?: { nombre: string; url: string; tipo: string; tamano: number }[] }[]; meta2026: number; metaGestion?: number; meta2030: number | null };
 
 const number = (value: number | null | undefined) => value === null || value === undefined ? '—' : Number(value).toLocaleString('es-BO');
 
-export function MatrizPlanificacion({ acciones, codigoEje, gestion, onFicha, onMedir }: { acciones: MatrixAction[]; codigoEje: string; gestion: number; onFicha?: (accion: MatrixAction) => void; onMedir?: (accion: MatrixAction) => void }) {
+export function MatrizPlanificacion({ acciones, codigoEje, gestion, onFicha, onMedir, mostrarFicha = true }: { acciones: MatrixAction[]; codigoEje: string; gestion: number; onFicha?: (accion: MatrixAction) => void; onMedir?: (accion: MatrixAction) => void; mostrarFicha?: boolean }) {
   useEffect(() => {
     if (!onFicha) return;
     const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).filter((button) => button.textContent?.trim() === 'Ficha');

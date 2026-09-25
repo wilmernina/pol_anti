@@ -10,6 +10,8 @@ export function createEjesRouter(pool: Pool): Router {
   router.get('/:codigo/resumen', async (request: Request, response: Response) => {
     const codigo = Array.isArray(request.params.codigo) ? '' : request.params.codigo;
     if (!validCode(codigo)) return error(response, 400, 'Código de eje inválido');
+    const gestion = Number(request.query.gestion ?? 2026);
+    if (!Number.isInteger(gestion) || gestion < 2026 || gestion > 2030) return error(response, 400, 'Gestión inválida');
     try {
       const result = await pool.query('SELECT codigo, nombre, objetivo, indicadores_principales, resultados_2030 FROM ejes WHERE codigo = $1', [codigo]);
       if (!result.rows[0]) return error(response, 404, 'Eje no encontrado');
@@ -17,6 +19,8 @@ export function createEjesRouter(pool: Pool): Router {
     } catch { return error(response, 500, 'No se pudo obtener el eje'); }
   });
   router.get('/:codigo/matriz', async (request: Request, response: Response) => {
+    const gestion = Number(request.query.gestion ?? 2026);
+    if (!Number.isInteger(gestion) || gestion < 2026 || gestion > 2030) return error(response, 400, 'Gestion invalida');
     const codigo = Array.isArray(request.params.codigo) ? '' : request.params.codigo;
     if (!validCode(codigo)) return error(response, 400, 'Código de eje inválido');
     try {
@@ -26,21 +30,21 @@ export function createEjesRouter(pool: Pool): Router {
         i.siglas AS entidad,
         COALESCE(json_agg(json_build_object('trimestre',mt.trimestre,'cantidadProgramada',mt.cantidad_programada,'cantidadEjecutada',mt.cantidad_ejecutada,'medicionRegistrada',mt.fecha_registro IS NOT NULL,'observaciones',mt.observaciones,'justificacion',mt.justificacion,'medidasCorrectivas',mt.medidas_correctivas,'medioVerificacion',mt.medio_verificacion,'evidenciaUrl',mt.evidencia_url,'evidencias',mt.evidencias) ORDER BY mt.trimestre)
           FILTER (WHERE mt.id IS NOT NULL), '[]'::json) AS trimestres,
-        COALESCE(SUM(mt.cantidad_programada) FILTER (WHERE mt.gestion=2026), 0) AS meta_2026
+        COALESCE(SUM(mt.cantidad_programada), 0) AS meta_gestion
         FROM ejes e
         JOIN acciones a ON a.eje_id=e.id
         LEFT JOIN instituciones i ON i.id=a.institucion_principal_id
-        LEFT JOIN metas_trimestrales mt ON mt.accion_id=a.id AND mt.gestion=2026
+        LEFT JOIN metas_trimestrales mt ON mt.accion_id=a.id AND mt.gestion=$2
         WHERE e.codigo=$1 AND a.estado_planificacion='publicada'
-        GROUP BY e.codigo,e.nombre,a.id,i.siglas ORDER BY a.orden`, [codigo]);
+        GROUP BY e.codigo,e.nombre,a.id,i.siglas ORDER BY a.orden`, [codigo, gestion]);
       if (!result.rows.length) { const exists=await pool.query('SELECT 1 FROM ejes WHERE codigo=$1',[codigo]); if(!exists.rows.length) return error(response,404,'Eje no encontrado'); }
       const first = result.rows[0];
       const acciones = result.rows.map((row) => ({
         ...row,
         trimestres: row.trimestres ?? [1, 2, 3, 4].map((trimestre) => ({ trimestre, cantidadProgramada: row[`t${trimestre}`] ?? 0 })),
-        meta2026: Number(row.meta_2026 ?? row.meta2026 ?? 0)
+        metaGestion: Number(row.meta_gestion ?? row.meta_2026 ?? row.meta2026 ?? 0), meta2026: Number(row.meta_gestion ?? row.meta_2026 ?? row.meta2026 ?? 0)
       }));
-      return response.json({ success: true, data: { eje: first ? { codigo: first.eje_codigo, nombre: first.eje_nombre } : { codigo, nombre: '' }, columnas: ['L. BASE', 'T1 (ENE-MAR)', 'T2 (ABR-JUN)', 'T3 (JUL-SEP)', 'T4 (OCT-DIC)', 'META 2026', 'META 2030'], acciones }, error: null });
+      return response.json({ success: true, data: { eje: first ? { codigo: first.eje_codigo, nombre: first.eje_nombre } : { codigo, nombre: '' }, gestion, columnas: ['L. BASE', 'T1 (ENE-MAR)', 'T2 (ABR-JUN)', 'T3 (JUL-SEP)', 'T4 (OCT-DIC)', `META ${gestion}`, 'META 2030'], acciones }, error: null });
     } catch { return error(response, 500, 'No se pudo obtener la matriz'); }
   });
   return router;
